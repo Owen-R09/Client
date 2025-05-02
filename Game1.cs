@@ -29,7 +29,7 @@ namespace Client
         protected override void Initialize()
         {
             client.Start();
-            client.Connect("127.0.0.1", 1989);
+            client.Connect("10.10.118.23", 1989);
 
             base.Initialize();
         }
@@ -56,7 +56,7 @@ namespace Client
             if(client.ServerConnection == null)
             {
                 Thread.Sleep(1000);
-                client.Connect("127.0.0.1", 1989);
+                client.Connect("10.10.118.23", 1989);
             }
 
             if (isTyping)
