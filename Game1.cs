@@ -64,7 +64,8 @@ namespace Client
 
             if(client.ServerConnection == null && !string.IsNullOrEmpty(IP))
             {
-                client.Connect(IP, 1989);
+                Thread.Sleep(1000);
+                client.Connect("127.0.0.1", 1989);
             }
 
             if (isTyping)
