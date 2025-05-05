@@ -2,7 +2,11 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Client
 {
@@ -19,6 +23,8 @@ namespace Client
 
         public KeyboardState previousKeyBoard;
 
+        public string IP;
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
@@ -28,8 +34,8 @@ namespace Client
 
         protected override void Initialize()
         {
+            IP = GetPublicIP();
             client.Start();
-            client.Connect("127.0.0.1", 1989);
 
             base.Initialize();
         }
@@ -43,7 +49,10 @@ namespace Client
 
         protected override void OnExiting(object sender, ExitingEventArgs args)
         {
-            client.Disconnect("Good bye");
+            var msg = client.CreateMessage();
+            msg.Write("M2," + playerName);
+            client.SendMessage(msg, NetDeliveryMethod.ReliableOrdered);
+            client.Disconnect("");
 
             base.OnExiting(sender, args);
         }
@@ -53,10 +62,9 @@ namespace Client
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            if(client.ServerConnection == null)
+            if(client.ServerConnection == null && !string.IsNullOrEmpty(IP))
             {
-                Thread.Sleep(1000);
-                client.Connect("127.0.0.1", 1989);
+                client.Connect(IP, 1989);
             }
 
             if (isTyping)
@@ -74,7 +82,7 @@ namespace Client
                         else if (keys == Keys.Enter)
                         {
                             var msg = client.CreateMessage();
-                            msg.Write(playerName);
+                            msg.Write("M1," + playerName);
                             client.SendMessage(msg, NetDeliveryMethod.ReliableOrdered);
                             isTyping = false;
                         }
@@ -114,6 +122,18 @@ namespace Client
             return '\0';
         }
 
+        public string GetPublicIP()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily == AddressFamily.InterNetwork)
+                    return ip.ToString(); // e.g. 192.168.1.42
+            }
+
+            throw new System.Exception("No Adapters found!");
+        }
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
@@ -123,20 +143,24 @@ namespace Client
 
             spriteBatch.Begin();
 
+            spriteBatch.DrawString(font, $"IP: {IP}", new Vector2(5, 70), Color.Black);
+
             if (client.ServerConnection != null)
             {
                 spriteBatch.DrawString(font, "Connected to Server", new Vector2(5, 20), Color.Black);
-                spriteBatch.DrawString(font, $"Port: {client.Port}", new Vector2(5, 70), Color.Black);
             }
             else
             {
                 spriteBatch.DrawString(font, "Not Connected to Server", new Vector2(5, 20), Color.Black);
             }
 
-            if(isTyping)
-                spriteBatch.DrawString(font, $"Enter your Name: {playerName}", new Vector2(5, 120), Color.Black);
-            else
-                spriteBatch.DrawString(font, $"Name: {playerName}", new Vector2(5, 120), Color.Black);
+            if(client.ServerConnection != null)
+            {
+                if (isTyping)
+                    spriteBatch.DrawString(font, $"Enter your Name: {playerName}", new Vector2(5, 120), Color.Black);
+                else
+                    spriteBatch.DrawString(font, $"Name: {playerName}", new Vector2(5, 120), Color.Black);
+            }
 
             spriteBatch.End();
 
